@@ -79,6 +79,8 @@ sl.on_ac_power = lambda: False
 tray.ac_only.trigger()
 check("лише від мережі, на батареї: не тримає",
       not tray.guard.holding and "чекає" in tray.status.text())
+check("лише від мережі, на батареї: значок очікування",
+      tray.tray.icon().cacheKey() == tray.icon_wait.cacheKey())
 sl.on_ac_power = lambda: True
 tray.refresh()
 check("лише від мережі, від мережі: тримає", tray.guard.holding)
@@ -93,6 +95,8 @@ check("Claude Code, від мережі: тримає",
 sl.on_ac_power = lambda: False
 tray.refresh()
 check("Claude Code, на батареї: не тримає", not tray.guard.holding)
+check("Claude Code, на батареї: значок вимкнено",
+      tray.tray.icon().cacheKey() == tray.icon_off.cacheKey())
 sl.on_ac_power = lambda: True
 tray.claude.trigger()
 check("режим Claude Code вимкнено: не тримає", not tray.guard.holding)
@@ -105,9 +109,9 @@ sl.on_ac_power = orig
 tray.guard.release()
 check("вихід: запит знято", tray.guard._request is None and thread_flags() & 3 == 0)
 
-for active in (True, False):
-    sl.make_icon(active, 128).pixmap(128, 128).save(
-        str(Path(__file__).with_name(f"s_icon_{'on' if active else 'off'}.png")))
+for state in ("on", "off", "wait"):
+    sl.make_icon(state, 128).pixmap(128, 128).save(
+        str(Path(__file__).with_name(f"s_icon_{state}.png")))
 
 print(f"Підсумок: {sum(results)} з {len(results)}")
 sys.exit(0 if all(results) else 1)

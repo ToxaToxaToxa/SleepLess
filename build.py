@@ -15,7 +15,7 @@ def make_ico() -> Path:
     app = QGuiApplication.instance() or QGuiApplication(sys.argv)  # noqa: F841
     png = HERE / "build" / "icon.png"
     png.parent.mkdir(exist_ok=True)
-    sleepless.make_icon(True, 256).pixmap(256, 256).save(str(png))
+    sleepless.make_icon("on", 256).pixmap(256, 256).save(str(png))
     ico = HERE / "build" / "sleepless.ico"
     Image.open(png).save(ico, sizes=[(16, 16), (24, 24), (32, 32), (48, 48),
                                      (64, 64), (128, 128), (256, 256)])

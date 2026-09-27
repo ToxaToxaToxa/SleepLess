@@ -29,7 +29,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QLockFile, QPointF, QRectF, Qt, QTimer
 from PySide6.QtGui import (QAction, QColor, QIcon, QPainter,
-                           QPainterPath, QPen, QPixmap)
+                           QPainterPath, QPen, QPixmap, QPolygonF)
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 APP = "SleepLess"
@@ -201,14 +201,15 @@ AMBER = QColor("#F2A93B")
 GREY = QColor("#9AA4AD")
 
 
-def make_icon(active: bool, size: int = 64) -> QIcon:
-    """Увімкнено — бурштинове око, розплющене; вимкнено — сірий місяць."""
+def make_icon(state: str, size: int = 64) -> QIcon:
+    """"on" — бурштинове око, розплющене; "off" — сірий місяць;
+    "wait" (увімкнено, чекає мережі) — сірий місяць з бурштиновою блискавкою."""
     pix = QPixmap(size, size)
     pix.fill(Qt.transparent)
     p = QPainter(pix)
     p.setRenderHint(QPainter.Antialiasing)
     s = size / 64.0
-    if active:
+    if state == "on":
         eye = QPainterPath()
         eye.moveTo(4 * s, 32 * s)
         eye.quadTo(32 * s, 2 * s, 60 * s, 32 * s)
@@ -227,6 +228,21 @@ def make_icon(active: bool, size: int = 64) -> QIcon:
         p.setPen(Qt.NoPen)
         p.setBrush(GREY)
         p.drawPath(moon.subtracted(bite))
+        if state == "wait":
+            # блискавка в правому нижньому куті, з прозорим контуром,
+            # щоб не зливалася з місяцем на дрібному значку
+            bolt = QPolygonF([QPointF(x * s, y * s) for x, y in (
+                (50, 22), (32, 46), (44, 46), (38, 64), (60, 38), (48, 38),
+                (56, 22))])
+            p.setCompositionMode(QPainter.CompositionMode_Clear)
+            p.setPen(QPen(Qt.black, 6 * s, Qt.SolidLine, Qt.RoundCap,
+                          Qt.RoundJoin))
+            p.setBrush(Qt.black)
+            p.drawPolygon(bolt)
+            p.setCompositionMode(QPainter.CompositionMode_SourceOver)
+            p.setPen(Qt.NoPen)
+            p.setBrush(AMBER)
+            p.drawPolygon(bolt)
     p.end()
     return QIcon(pix)
 
@@ -291,7 +307,8 @@ class Tray:
         self.guard = Guard()
         self.until = None          # time.time() кінця таймера або None
 
-        self.icon_on, self.icon_off = make_icon(True), make_icon(False)
+        self.icon_on, self.icon_off, self.icon_wait = (
+            make_icon("on"), make_icon("off"), make_icon("wait"))
         self.tray = QSystemTrayIcon(self.icon_off)
         self.tray.activated.connect(self._activated)
 
@@ -420,7 +437,8 @@ class Tray:
 
         self.status.setText(what)
         self.toggle.setChecked(enabled)
-        self.tray.setIcon(self.icon_on if holding else self.icon_off)
+        self.tray.setIcon(self.icon_on if holding else
+                          self.icon_wait if waiting_ac else self.icon_off)
         self.tray.setToolTip(f"{APP}: {what}")
 
 
